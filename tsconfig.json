@@ -1,0 +1,24 @@
+{
+    "include": [
+        "./src"
+    ],
+    "compilerOptions": {
+        /* Language and Environment */
+        "target": "ESNext",
+        "lib": [],
+        /* Modules */
+        "module": "NodeNext",
+        "declaration": false,
+        "outDir": "./dist",
+        "isolatedModules": true,
+        "verbatimModuleSyntax": true,
+        "esModuleInterop": false,
+        "forceConsistentCasingInFileNames": true,
+        /* Type Checking */
+        "strict": true,
+        "noImplicitAny": true,
+        "strictNullChecks": true,
+        /* Completeness */
+        "skipLibCheck": true
+    }
+}
