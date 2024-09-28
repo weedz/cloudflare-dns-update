@@ -3,18 +3,22 @@
 ## Systemd unit
 
 Install a timer `.config/systemd/user/cloudflare-dns-update.timer`:
+
 ```systemd
 [Unit]
 Description=Update DNS records
  
 [Timer]
-OnUnitActiveSec=1min
+# Run the service every minute
+OnCalendar=*-*-* *:*:00
+OnBootSec=5min
  
 [Install]
 WantedBy=timers.target
 ```
 
 And a service `.config/systemd/user/cloudflare-dns-update.service`:
+
 ```systemd
 [Unit]
 Description=Update DNS records
@@ -28,7 +32,8 @@ ExecStart=/home/pi/.local/n/bin/node --env-file=.env dist/main.js
 ```
 
 Enable with:
+
 ```console
-$ systemd --user start cloudflare-dns-update.timer
-$ systemd --user enable cloudflare-dns-update.timer
+systemd --user start cloudflare-dns-update.timer
+systemd --user enable cloudflare-dns-update.timer
 ```
