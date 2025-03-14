@@ -41,13 +41,18 @@ async function main() {
       throw new Error(`CF and ipify did not return the same ip address. CF: '${cf_ip}', ipify: '${currentIp}'`);
     }
 
-    updateLastKnownIp(currentIp);
     // Only update DNS records if we know the previous IP
     if (lastKnownIp) {
-      await updateDnsRecords(lastKnownIp, currentIp);
+      const result = await updateDnsRecords(lastKnownIp, currentIp);
+      if (result instanceof Error) {
+        process.stderr.write(`An error occured while updating DNS records. Error: ${result.message}`);
+      } else if (result) {
+        updateLastKnownIp(currentIp);
+      }
+    } else {
+      // Alwats update "last known ip" if "last known ip" is null (not known)
+      updateLastKnownIp(currentIp);
     }
-  } else {
-    process.stdout.write("Ip has not changed.\n");
   }
 }
 
@@ -62,7 +67,7 @@ function updateLastKnownIp(ip: string): void {
   fs.writeFileSync(ipFile, ip);
 }
 
-async function updateDnsRecords(lastKnownIp: string, newIp: string) {
+async function updateDnsRecords(lastKnownIp: string, newIp: string): Promise<Error | true> {
   const cloudflare = new CloudflareAPI(env.API_TOKEN);
   // TODO: Should we check all zones or just the zones from `.env` `ZONE_IDS`?
   // 1. Find your Zone ID from the cloudflare dash board ("Overview" when you select a website)
@@ -72,8 +77,7 @@ async function updateDnsRecords(lastKnownIp: string, newIp: string) {
   for (const zoneId of env.ZONE_IDS) {
     const dnsRecords = await cloudflare.getDnsRecords(zoneId);
     if (dnsRecords instanceof Error) {
-      console.error("Error:", dnsRecords);
-      continue;
+      return dnsRecords;
     }
     for (const dnsRecord of dnsRecords.result) {
       if (dnsRecord.type !== "A") {
@@ -101,6 +105,7 @@ async function updateDnsRecords(lastKnownIp: string, newIp: string) {
     }
   }
 
+  return true;
 }
 
 await main();
