@@ -11,7 +11,6 @@
 
 void callback(void *args, ares_status_t status, size_t timeouts,
               const ares_dns_record_t *dnsrec) {
-  // TODO: cleanup `dnsrec` and other things created/allocated here.
   if (!dnsrec || status != ARES_SUCCESS) {
     printf("Failed to query, error: %s\n", ares_strerror(status));
     return;
@@ -20,8 +19,12 @@ void callback(void *args, ares_status_t status, size_t timeouts,
   size_t query_cnt = ares_dns_record_query_cnt(dnsrec);
   printf("Query result: %zu\n", query_cnt);
 
-  if (query_cnt != 1) {
+  if (query_cnt == 0) {
     printf("did not return a result\n");
+    return;
+  }
+  if (query_cnt > 1) {
+    printf("returned more than one result\n");
     return;
   }
 
@@ -58,15 +61,12 @@ void callback(void *args, ares_status_t status, size_t timeouts,
   const unsigned char *addr =
       ares_dns_rr_get_abin(dns_resource, ARES_RR_TXT_DATA, 0, &addr_len);
 
-  printf("  addr data: %s\n", addr);
+  printf("  addr data: %.*s\n", (int)addr_len, addr);
 }
 
 int main(void) {
-  int status;
-  int optmask;
-  optmask |= ARES_OPT_EVENT_THREAD;
-
-  status = ares_library_init(ARES_LIB_INIT_ALL);
+  int optmask = ARES_OPT_EVENT_THREAD;
+  int status = ares_library_init(ARES_LIB_INIT_ALL);
   if (status != ARES_SUCCESS) {
     printf("Failed to init library, error: %s\n", ares_strerror(status));
     return 1;
@@ -78,6 +78,7 @@ int main(void) {
   status = ares_init_options(&channel, &options, optmask);
   if (status != ARES_SUCCESS) {
     printf("Failed to init library, error: %s\n", ares_strerror(status));
+    ares_library_cleanup();
     return 1;
   }
 
@@ -85,6 +86,8 @@ int main(void) {
   if (status != ARES_SUCCESS) {
     printf("Failed to set resolve server to 1.1.1.1. error: %s\n",
            ares_strerror(status));
+    ares_destroy(channel); // Seems resonable to cleanup, but is it needed here?
+    ares_library_cleanup();
     return 1;
   }
 
@@ -94,6 +97,8 @@ int main(void) {
                              ARES_REC_TYPE_TXT, callback, NULL, NULL);
   if (status != ARES_SUCCESS) {
     printf("Failed to init query, error: %s\n", ares_strerror(status));
+    ares_destroy(channel); // Seems resonable to cleanup, but is it needed here?
+    ares_library_cleanup();
     return 1;
   }
 
