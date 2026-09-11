@@ -13,9 +13,9 @@
     "keywords": [],
     "author": "Linus Björklund",
     "license": "MIT",
-    "packageManager": "pnpm@10.12.3+sha512.467df2c586056165580ad6dfb54ceaad94c5a30f80893ebdec5a44c5aa73c205ae4a5bb9d5ed6bb84ea7c249ece786642bbb49d06a307df218d03da41c317417",
+    "packageManager": "pnpm@11.26.0+sha512.fc0e2bf890b9f983611f1ab68c0637bce914390653699f83c1a78b005ed25f2c81e77920c8fd8eee2ecf0b58b28cdcb00a84d97f69bcf7c56b2f344710238664",
     "devDependencies": {
-        "@types/node": "^24.0.4",
-        "typescript": "^5.8.3"
+        "@types/node": "^26.5.1",
+        "typescript": "^7.0.2"
     }
 }

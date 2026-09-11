@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { CloudflareAPI } from "./CloudflareAPI.js";
 import { styleText } from "node:util";
-import { getIpCloudflare, getIpIpify, validateIp } from "./ip.js";
+import { getIpCloudflare, getIpOpenDns, validateIp } from "./ip.js";
 
 const dir = import.meta.dirname;
 const ipFile = path.join(dir, "ip");
@@ -24,11 +24,11 @@ const env = (() => {
 async function main() {
   const lastKnownIp = readLastKnownIp();
 
-  const currentIp = await getIpIpify();
+  const currentIp = await getIpOpenDns();
 
   if (currentIp !== lastKnownIp) {
     // TODO: Notify "authorities" about the change
-    process.stdout.write("NEW IP DETECTED!\n\n");
+    process.stdout.write("NEW IP DETECTED!\n");
     process.stdout.write(`  Old ip: ${lastKnownIp}\n`);
     process.stdout.write(`  New ip: ${currentIp}\n`);
 
@@ -37,15 +37,19 @@ async function main() {
     }
 
     const cf_ip = await getIpCloudflare();
-    if (cf_ip !== currentIp) {
-      throw new Error(`CF and ipify did not return the same ip address. CF: '${cf_ip}', ipify: '${currentIp}'`);
+    if (currentIp !== cf_ip) {
+      throw new Error(
+        `CF and ipify did not return the same ip address. CF: '${cf_ip}', ipify: '${currentIp}'`,
+      );
     }
 
     // Only update DNS records if we know the previous IP
     if (lastKnownIp) {
       const result = await updateDnsRecords(lastKnownIp, currentIp);
       if (result instanceof Error) {
-        process.stderr.write(`An error occured while updating DNS records. Error: ${result.message}`);
+        process.stderr.write(
+          `An error occured while updating DNS records. Error: ${result.message}`,
+        );
       } else if (result) {
         updateLastKnownIp(currentIp);
       }
@@ -67,7 +71,10 @@ function updateLastKnownIp(ip: string): void {
   fs.writeFileSync(ipFile, ip);
 }
 
-async function updateDnsRecords(lastKnownIp: string, newIp: string): Promise<Error | true> {
+async function updateDnsRecords(
+  lastKnownIp: string,
+  newIp: string,
+): Promise<Error | true> {
   const cloudflare = new CloudflareAPI(env.API_TOKEN);
   // TODO: Should we check all zones or just the zones from `.env` `ZONE_IDS`?
   // 1. Find your Zone ID from the cloudflare dash board ("Overview" when you select a website)
@@ -81,7 +88,9 @@ async function updateDnsRecords(lastKnownIp: string, newIp: string): Promise<Err
     }
     for (const dnsRecord of dnsRecords.result) {
       if (dnsRecord.type !== "A") {
-        process.stdout.write("Encountered record with unsupported type. We only handle A records\n");
+        process.stdout.write(
+          "Encountered record with unsupported type. We only handle A records\n",
+        );
         continue;
       }
 
@@ -90,17 +99,33 @@ async function updateDnsRecords(lastKnownIp: string, newIp: string): Promise<Err
       process.stdout.write(`  content: ${dnsRecord.content}\n`);
       if (dnsRecord.content !== lastKnownIp) {
         // NOTE: We do not touch these :+1:
-        process.stdout.write(`  action: ${styleText("yellow", "* External DNS record *")} (not touching)\n`);
+        process.stdout.write(
+          `  action: ${styleText("yellow", "* External DNS record *")} (not touching)\n`,
+        );
       } else if (dnsRecord.content !== newIp) {
-        process.stdout.write(`  action: ${styleText("red", "** !!NEEDS UPDATE!! **")}\n`);
-        const result = await cloudflare.updateDnsRecord(zoneId, dnsRecord.id, { content: newIp });
-        if (result instanceof Error || result.errors.length !== 0 || !result.success) {
-          process.stdout.write(styleText("red", "!! FAILED TO UPDATE DNS RECORDS !!"));
+        process.stdout.write(
+          `  action: ${styleText("red", "** !!NEEDS UPDATE!! **")}\n`,
+        );
+        const result = await cloudflare.updateDnsRecord(zoneId, dnsRecord.id, {
+          content: newIp,
+        });
+        if (
+          result instanceof Error ||
+          result.errors.length !== 0 ||
+          !result.success
+        ) {
+          process.stdout.write(
+            styleText("red", "!! FAILED TO UPDATE DNS RECORDS !!"),
+          );
         } else {
-          process.stdout.write(`    ${styleText("green", "DNS records updated")}\n`)
+          process.stdout.write(
+            `    ${styleText("green", "DNS records updated")}\n`,
+          );
         }
       } else {
-        process.stdout.write(`  action: ${styleText("green", "Nothing changed")}\n`);
+        process.stdout.write(
+          `  action: ${styleText("green", "Nothing changed")}\n`,
+        );
       }
     }
   }

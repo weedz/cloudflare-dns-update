@@ -1,13 +1,18 @@
 // TODO: Could use `deps/ch_dns`
 
-export async function getIpIpify() {
-  const response = await fetch("https://api.ipify.org/");
-  if (!response.ok) {
-    throw new Error("ipify.org seems to be down");
+import { Resolver } from "node:dns/promises";
+
+// dig +short myip.opendns.com @resolver1.opendns.com
+export async function getIpOpenDns() {
+  const resolver = new Resolver();
+  resolver.setServers(["208.67.222.222"]);
+
+  const ip = await resolver.resolve4("myip.opendns.com");
+  if (!ip[0]) {
+    throw new Error("opendns did not resolve an ip address");
   }
 
-  const ip = await response.text();
-  return ip.trim();
+  return ip[0].trim();
 }
 
 export async function getIpCloudflare() {
@@ -17,7 +22,11 @@ export async function getIpCloudflare() {
   }
 
   const data = await response.text();
-  const ip = data.trim().replaceAll("\r", "").split("\n").find(row => row.startsWith("ip="));
+  const ip = data
+    .trim()
+    .replaceAll("\r", "")
+    .split("\n")
+    .find((row) => row.startsWith("ip="));
   if (!ip) {
     throw new Error("cloudflare did not return an ip address");
   }
@@ -44,5 +53,3 @@ export function validateIp(ip: string) {
   }
   return true;
 }
-
-
